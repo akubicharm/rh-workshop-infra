@@ -1,0 +1,18 @@
+apiVersion: ols.openshift.io/v1alpha1
+kind: OLSConfig
+metadata:
+  name: cluster
+spec:
+  llm:
+    providers:
+      - name: myOpenai
+        type: openai
+        credentialsSecretRef:
+          name: credentials
+        url: http://vllm-vllm.[OpenShift Cluster Subdomain]/v1
+        models:
+          - name: microsoft/Phi-4-mini-instruct
+  ols:
+    defaultModel: microsoft/Phi-4-mini-instruct
+    defaultProvider: myOpenai
+    logLevel: DEBUG

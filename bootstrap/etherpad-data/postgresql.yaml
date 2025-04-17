@@ -1,0 +1,118 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+stringData:
+  database-name: etherpad
+  database-password: etherpad
+  database-user: etherpad
+type: Opaque
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgresql
+          image: registry.redhat.io/rhel9/postgresql-15:latest
+          resources:
+            limits:
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+                - '--live'
+            initialDelaySeconds: 120
+            timeoutSeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          env:
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: database-user
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: database-password
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: database-name
+          securityContext:
+            capabilities: {}
+            privileged: false
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          imagePullPolicy: IfNotPresent
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - name: etherpad-data
+              mountPath: /var/lib/pgsql/data/
+      volumes:
+        - name: etherpad-data
+          persistentVolumeClaim:
+            claimName: postgres
+  strategy:
+    type: Recreate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  ports:
+  - name: postgresql
+    protocol: TCP
+    port: 5432
+    targetPort: 5432
+  selector:
+    app: postgres
+  sessionAffinity: None
+  type: ClusterIP    

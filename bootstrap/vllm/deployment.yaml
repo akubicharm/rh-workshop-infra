@@ -1,0 +1,73 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm
+  namespace: vllm
+  labels:
+    app: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm
+  template:
+    metadata:
+      labels:
+        app: vllm
+    spec:
+      volumes:
+      - name: cache-volume
+        persistentVolumeClaim:
+          claimName: vllm
+      # vLLM needs to access the host's shared memory for tensor parallel inference.
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: "8Gi"
+      containers:
+      - name: vllm
+        image: vllm/vllm-openai:latest
+        command: ["/bin/sh", "-c"]
+        args: [
+#          "vllm serve microsoft/Phi-4 --trust-remote-code --enable-chunked-prefill --max_num_batched_tokens 1024"
+          "vllm serve microsoft/Phi-4-mini-instruct --trust-remote-code --enable-chunked-prefill --max_num_batched_tokens 10240 --gpu-memory-utilization 0.80 --max-model-len 10k"
+        ]
+        env:
+        - name: HUGGING_FACE_HUB_TOKEN
+          value: |> HF TOKEN HERE <|
+#        - name: VLLM_LOGGING_LEVEL
+#          value: 'DEBUG'
+        - name: VLLM_PORT
+          value: '8000'
+        ports:
+        - containerPort: 8000
+          value: 'DEBUG'
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            cpu: "10"
+            memory: 20G
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "6"
+            memory: 6G
+            nvidia.com/gpu: "1"
+        volumeMounts:
+        - mountPath: /.cache
+          name: cache-volume
+        - name: shm
+          mountPath: /dev/shm
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 5

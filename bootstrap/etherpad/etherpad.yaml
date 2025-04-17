@@ -1,0 +1,98 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etherpad
+  labels:
+    app: etherpad  
+data:
+  settings.json: |
+    {
+      "skinName":"colibris",
+      "title":"NTT West Mad Workshop"
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etherpad
+  labels:
+    app: etherpad  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: etherpad
+  template:
+    metadata:
+      labels:
+        app: etherpad
+    spec:
+      containers:
+      - name: etherpad
+        # image: quay.io/keomizo_redhat/etherpad:latest
+        image: etherpad/etherpad
+        securityContext:
+          allowPriviledgeEscalation: false
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: DB_TYPE
+          value: postgres
+        - name: ADMIN_PASSWORD
+          value: admin
+        - name: DB_CHARSET
+          value: utf8
+        - name: DB_HOST
+          value: postgres.etherpad-data.svc
+        - name: DB_NAME
+          value: etherpad
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres
+              key: database-user
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: postgres
+              key: database-password
+        ports:
+        - containerPort: 9001
+          name: web
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: "config"
+          mountPath: "/opt/etherpad/settings.json"
+          subPath: "settings.json"
+      volumes:
+      - name: config
+        configMap:
+          name: etherpad
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etherpad
+  labels:
+    app: etherpad
+spec:
+  ports:
+  - name: etherpad
+    protocol: TCP
+    port: 9001
+    targetPort: 9001
+  selector:
+    app: etherpad
+  sessionAffinity: None
+  type: ClusterIP
+

@@ -1,0 +1,15 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: vllm
+spec:
+  port:
+    targetPort: http
+  tls:
+    insecureEdgeTerminationPolicy: Allow
+    termination: edge
+  to:
+    kind: Service
+    name: vllm
+    weight: 100
+  wildcardPolicy: None
