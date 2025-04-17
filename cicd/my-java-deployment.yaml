@@ -1,0 +1,109 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: my-java-deployment
+  namespace: cicd-user1
+spec:
+  params:
+    - name: sonar-url
+      default: https://sonarqube.ws-shared-sonarcube.svc
+      type: string
+    - name: sonar-project-key
+      default: user1
+      type: string
+    - name: sonar-project
+      default: user1
+      type: string
+    - name: sonar-scanner-image
+      default: docker.io/sonarsource/sonar-scanner-cli:latest
+      type: string
+    - name: sonar-properties
+      default: sonar-project.properties
+      type: string  
+    - default: 'http://gitea.gitea.svc:3000/user1/modern-app-dev'
+      name: git-url
+      type: string
+    - default: ocp-4.15
+      name: git-branch
+      type: string
+    - default: customers-tomcat-gitops
+      name: app-subdir
+      type: string
+    - default: retail-user1
+      name: target-namespace
+      type: string
+    - default: 'image-registry.openshift-image-registry.svc:5000'
+      name: target-registry
+      type: string
+  tasks:
+    - name: clone-repository
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: revision
+          value: $(params.git-branch)
+        - name: subdirectory
+          value: source
+        - name: deleteExisting
+          value: 'true'
+      taskRef:
+        kind: Task
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: ws
+    - name: build-artifact
+      params:
+        - name: GOALS
+          value:
+            - package
+            - '-P kubernetes'
+        - name: subdirectory
+          value: source/$(params.app-subdir)
+      runAfter:
+        - clone-repository
+      taskRef:
+        kind: Task
+        name: maven-with-subdir
+      workspaces:
+        - name: source
+          workspace: ws
+    - name: build-image
+      params:
+        - name: IMAGE
+          value: '$(params.target-registry)/$(params.target-namespace)/$(params.app-subdir):$(tasks.clone-repository.results.short-commit)'
+        - name: DOCKERFILE
+          value: ./source/$(params.app-subdir)/Dockerfile
+        - name: CONTEXT
+          value: ./source/$(params.app-subdir)
+        - name: TLSVERIFY
+          value: 'false'
+      runAfter:
+        - build-artifact
+      taskRef:
+        kind: ClusterTask
+        name: buildah
+      workspaces:
+        - name: source
+          workspace: ws
+    - name: update-manifest-and-push
+      params:
+        - name: short-commit
+          value: $(tasks.clone-repository.results.short-commit)
+        - name: target-branch
+          value: $(params.git-branch)
+        - name: config-subdirectory
+          value: helm/$(params.app-subdir)
+        - name: git-root-directory
+          value: source
+      runAfter:
+        - build-image
+      taskRef:
+        kind: Task
+        name: update-manifest
+      workspaces:
+        - name: source
+          workspace: ws
+  workspaces:
+    - name: ws
+    - name: sonar-settings
