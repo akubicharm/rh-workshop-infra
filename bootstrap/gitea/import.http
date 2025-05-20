@@ -1,0 +1,23 @@
+POST https://gitea-gitea.apps.cluster-pqmg4.pqmg4.sandbox1915.opentlc.com/api/v1/repos/migrate?access_token=0bac0ba00dac0b0000e00d0dbced000f00bcfd00
+Content-Type: application/json
+
+{
+    "clone_addr": "https://github.com/akubicharm/containerapps-albumapi-java",
+    "repo_name": "albumapi",
+    "repo_owner": "test1"
+}
+
+
+###
+
+https://gitea-gitea.apps.cluster-pqmg4.pqmg4.sandbox1915.opentlc.com/api/v1/repos/user1/albumapi
+
+Content-Type: application/json
+
+###
+GET https://gitea-gitea.apps.cluster-pqmg4.pqmg4.sandbox1915.opentlc.com/api/v1/repos/search?access_token=0bac0ba00dac0b0000e00d0dbced000f00bcfd00
+Content-Type: application/json
+
+{
+    "q": "albumapi"
+}
