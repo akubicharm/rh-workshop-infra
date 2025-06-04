@@ -11,6 +11,18 @@ data:
       "skinName":"colibris",
       "title":"NTT West Mad Workshop"
     }
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+stringData:
+  database-name: etherpad
+  database-password: etherpad
+  database-user: etherpad
+type: Opaque
 
 ---
 apiVersion: apps/v1
