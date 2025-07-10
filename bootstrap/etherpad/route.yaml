@@ -1,0 +1,18 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: etherpad
+  annotations:
+    openshift.io/display-name: "Ehterpad"
+    argocd.argoproj.io/sync-wave: "2"  
+spec:
+  path: /
+  port:
+    targetPort: 9001-tcp
+  tls:
+    termination: edge
+  wildcardPolicy: None
+  to:
+    kind: Service
+    name: etherpad
+    weight: 100
