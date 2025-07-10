@@ -11,3 +11,4 @@ resources:
 # wave 0
 - namespace.yaml
 - etherpad.yaml
+- route.yaml
