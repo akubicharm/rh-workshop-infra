@@ -8,7 +8,7 @@ metadata:
 spec:
   path: /
   port:
-    targetPort: 9001-tcp
+    targetPort: 9001
   tls:
     termination: edge
   wildcardPolicy: None
